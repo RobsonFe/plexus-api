@@ -7,9 +7,9 @@
 **Testes:**
 
 ```ts
-// src/modules/clinical/clinical.service.spec.ts — unit
+// src/modules/clinical/test/clinical.service.spec.ts — unit
 it('rejects a chunk sent before metadata', async () => {
-  const error = await service.handleUpload(fakeUploadCall([chunk(10)])).catch((e: unknown) => e);
+  const error = await service.saveClinicalRecord(fakeUploadCall([chunk(10)])).catch((e: unknown) => e);
 
   expect((error as RpcException).getError()).toMatchObject({ code: status.INVALID_ARGUMENT });
   expect(await readdir(storageDir)).toEqual([]);
@@ -24,7 +24,7 @@ it('returns INVALID_ARGUMENT when the first frame is a chunk', async () => { /* 
 **Comando:**
 
 ```powershell
-npm test -- src/modules/clinical/clinical.service.spec.ts
+npm test -- src/modules/clinical/test/clinical.service.spec.ts
 npm run test:e2e -- test/clinical.e2e-spec.ts
 ```
 
@@ -53,7 +53,7 @@ Ver [grpc.md](grpc.md), [nest-unit.md](nest-unit.md) e a matriz de streaming em 
 
 ```markdown
 ## Testes
-- Arquivos: `src/modules/clinical/clinical.service.spec.ts`, `test/clinical.e2e-spec.ts`
+- Arquivos: `src/modules/clinical/test/clinical.service.spec.ts`, `test/clinical.e2e-spec.ts`
 - Matriz ramo → teste: (tabela de scenarios.md)
 - Comandos: `npm test -- src/modules/clinical` · `npm run test:e2e`
 - Resultado: N passed, 0 failed

@@ -17,12 +17,12 @@ export class GrpcAuthGuard implements CanActivate {
     const metadata = ctx.switchToRpc().getContext<Metadata>();
     const [raw] = metadata.get('authorization');
     const token = typeof raw === 'string' ? raw.replace(/^Bearer /, '') : undefined;
-    if (!token) throw new RpcException({ code: status.UNAUTHENTICATED, message: 'Missing credentials' });
+    if (!token) throw new RpcException({ code: status.UNAUTHENTICATED, message: 'Credenciais ausentes' });
     try {
       metadata.set('x-user-id', (await this.jwt.verifyAsync<{ sub: string }>(token)).sub);
       return true;
     } catch {
-      throw new RpcException({ code: status.UNAUTHENTICATED, message: 'Invalid credentials' });
+      throw new RpcException({ code: status.UNAUTHENTICATED, message: 'Credenciais inválidas' });
     }
   }
 }
@@ -35,7 +35,7 @@ export class GrpcAuthGuard implements CanActivate {
 
 ## 2. Autorização
 
-- Guard faz o grosso (autenticado? role?); **autorização por recurso** (este usuário pode ver este `recordId`?) fica no service, consultando o dono/escopo.
+- Guard faz o grosso (autenticado? role?); **autorização por recurso** (este usuário pode ver este `recordId`?) é decidida no service, com a consulta de escopo num método do repository (`findForUser(recordId, userId)`).
 - Recurso fora do escopo → `NOT_FOUND` (não revelar existência).
 - Roles via decorator (`@Roles('doctor')`) + `Reflector` no guard; nada de `if (user.role !== ...)` espalhado em handler.
 

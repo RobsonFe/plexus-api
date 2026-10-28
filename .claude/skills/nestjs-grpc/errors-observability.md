@@ -8,7 +8,8 @@ Referência: [docs.nestjs.com/microservices/exception-filters](https://docs.nest
 
 Services lançam exceções; não retornam `{ error: ... }` nem `null` silencioso para o controller decidir.
 
-- Domínio gRPC: `RpcException({ code, message })` com status de `@grpc/grpc-js` (tabela no [SKILL.md](SKILL.md#erros-grpc-núcleo)).
+- Domínio gRPC: `RpcException({ code, message })` com status de `@grpc/grpc-js` e mensagem em **PT-BR** (tabela no [SKILL.md](SKILL.md#erros-grpc-núcleo)).
+- Logs técnicos (`Logger`) podem ficar em inglês; o que chega ao cliente é PT-BR.
 - Domínio HTTP: `HttpException` tipadas.
 - Se o mesmo service atende os dois transportes, lance **erros de domínio** (`PatientNotFoundError extends Error`) e traduza em um filter por transporte.
 
@@ -24,16 +25,16 @@ export class GrpcExceptionFilter extends BaseRpcExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): Observable<never> {
     if (exception instanceof RpcException) return super.catch(exception, host);
     if (exception instanceof QueryFailedError && (exception as { code?: string }).code === '23505') {
-      return throwError(() => ({ code: status.ALREADY_EXISTS, message: 'Resource already exists' }));
+      return throwError(() => ({ code: status.ALREADY_EXISTS, message: 'Registro já existente' }));
     }
     this.logger.error('Unhandled gRPC error', exception instanceof Error ? exception.stack : undefined);
-    return throwError(() => ({ code: status.INTERNAL, message: 'Internal error' }));
+    return throwError(() => ({ code: status.INTERNAL, message: 'Erro interno' }));
   }
 }
 ```
 
 - Registrar com `app.useGlobalFilters(...)` + `inheritAppConfig: true`, ou `@UseFilters()` no controller gRPC.
-- Para `@GrpcStreamCall` (callback cru), o filter **não** intercepta: converta no controller (`callback(toGrpcError(err))`) usando a mesma função de mapeamento.
+- Para `@GrpcStreamCall` (callback cru), o filter **não** intercepta: converta no controller (`callback(toGrpcError(err))`). `toGrpcError` em `common/` é justificada porque filter e controller a usam (2 usos); com um só uso, ficaria inline.
 - Nunca colocar `error.message` de driver/SQL na mensagem ao cliente.
 
 ## 3. Erros assíncronos

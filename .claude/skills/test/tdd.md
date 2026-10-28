@@ -55,7 +55,7 @@ Um teste mínimo que mostra o comportamento desejado.
 ```ts
 // BOM
 it('rejects a chunk sent before metadata', async () => {
-  const error = await service.handleUpload(fakeUploadCall([chunk(10)])).catch((e: unknown) => e);
+  const error = await service.saveClinicalRecord(fakeUploadCall([chunk(10)])).catch((e: unknown) => e);
 
   expect((error as RpcException).getError()).toMatchObject({ code: status.INVALID_ARGUMENT });
 });
@@ -65,7 +65,7 @@ it('rejects a chunk sent before metadata', async () => {
 // RUIM — nome vago, testa mock
 it('works', async () => {
   const save = jest.fn().mockResolvedValue({ id: '1' });
-  await service.handleUpload(call);
+  await service.saveClinicalRecord(call);
   expect(save).toHaveBeenCalled();
 });
 ```
@@ -75,7 +75,7 @@ it('works', async () => {
 ### Verificar RED — obrigatório
 
 ```powershell
-npm test -- src/modules/clinical/clinical.service.spec.ts -t "rejects a chunk sent before metadata"
+npm test -- src/modules/clinical/test/clinical.service.spec.ts -t "rejects a chunk sent before metadata"
 ```
 
 Confirme:
@@ -136,7 +136,7 @@ Nomes de teste em inglês, como as funções (RNF04). Ao escrever ou mudar teste
 
 ```ts
 it('rejects a file one byte above the limit', async () => {
-  const error = await service.handleUpload(fakeUploadCall([{ metadata: validMetadata }, chunk(LIMIT + 1)])).catch((e: unknown) => e);
+  const error = await service.saveClinicalRecord(fakeUploadCall([{ metadata: validMetadata }, chunk(LIMIT + 1)])).catch((e: unknown) => e);
 
   expect((error as RpcException).getError()).toMatchObject({ code: status.RESOURCE_EXHAUSTED });
   expect(await readdir(storageDir)).toEqual([]);

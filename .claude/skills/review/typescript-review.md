@@ -2,7 +2,7 @@
 
 Camada de [SKILL.md](SKILL.md) para qualquer `.ts` do diff. Formatação é do Prettier (`singleQuote`, `trailingComma: all`) e lint do oxlint: **não** reportar o que eles já cobrem.
 
-Config relevante (`tsconfig.json`): `strict: true`, `strictPropertyInitialization: false` (necessário para entities/DTOs com decorators), `module: nodenext`, `isolatedModules: true`.
+Config relevante (`tsconfig.json`): `strict: true`, `strictPropertyInitialization: false` (necessário para entities/DTOs com decorators), `module: nodenext`, `isolatedModules: true`. As regras exigem também `noImplicitOverride` ([plexus-rules.md §1.4](../../rules/plexus-rules.md#14-typescript)) — hoje ainda não ativo no `tsconfig.json`; `override` ausente em método sobrescrito é Sugestão até ativar.
 
 ## Checklist
 
@@ -31,6 +31,13 @@ Config relevante (`tsconfig.json`): `strict: true`, `strictPropertyInitializatio
 - [ ] Erro relançado preserva causa (`new DomainError('...', { cause: err })`).
 - [ ] Erro de domínio como classe própria quando há tratamento específico.
 - [ ] Mensagem sem dado sensível.
+
+### Documentação e tamanho
+- [ ] JSDoc em método público de service/repository/mapper e função exportada: descrição, `@param`, `@returns`, `@throws`.
+- [ ] Método > 50 linhas → Obrigatório (extrair **um** método privado com nome de domínio, não vários helpers genéricos).
+- [ ] Aninhamento > 2 níveis → guard clauses.
+- [ ] Comentário inline só nas exceções (decisão não óbvia, workaround, limitação externa).
+- [ ] Mensagem ao cliente em PT-BR; identificadores em inglês.
 
 ### Erros comuns
 - [ ] `console.log` → `Logger`.

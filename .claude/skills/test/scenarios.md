@@ -65,7 +65,7 @@ it.each([
 ])('rejects invalid metadata %o', async (override, field) => {
   const call = fakeUploadCall([{ metadata: { ...validMetadata, ...override } }, chunk(10)]);
 
-  const error = await service.handleUpload(call).catch((e: unknown) => e);
+  const error = await service.saveClinicalRecord(call).catch((e: unknown) => e);
 
   expect(error).toBeInstanceOf(RpcException);
   expect((error as RpcException).getError()).toMatchObject({ code: status.INVALID_ARGUMENT });
@@ -78,9 +78,9 @@ it.each([
 
 ```ts
 it('removes temp file and returns INTERNAL when the database fails', async () => {
-  dataSource.transaction.mockRejectedValueOnce(new Error('connection lost'));
+  records.saveRecordWithFile.mockRejectedValueOnce(new Error('connection lost'));
 
-  const error = await service.handleUpload(fakeUploadCall([{ metadata: validMetadata }, chunk(64)])).catch((e: unknown) => e);
+  const error = await service.saveClinicalRecord(fakeUploadCall([{ metadata: validMetadata }, chunk(64)])).catch((e: unknown) => e);
 
   expect((error as RpcException).getError()).toMatchObject({ code: status.INTERNAL });
   expect(JSON.stringify((error as RpcException).getError())).not.toContain('connection lost');

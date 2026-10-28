@@ -11,6 +11,18 @@ Skills do Claude Code para o `plexus-api` (NestJS + gRPC + TypeORM/PostgreSQL). 
 
 Spec do produto (RF/RNF): [docs/CONTEXT.md](../../docs/CONTEXT.md).
 
+**Princípio transversal:** código mais limpo, legível e enxuto possível (KISS), sem helpers ou funções auxiliares desnecessárias; camadas Controller → Service → Repository → Mapper. Detalhe em [plexus-rules.md](../rules/plexus-rules.md).
+
+## Amarração Rules ↔ Skills
+
+| Camada | Arquivo |
+|--------|---------|
+| Instruções do agente (carregadas via `CLAUDE.md`) | [AGENTS.md](../AGENTS.md) |
+| Regras sempre ativas | [rules/plexus-rules.md](../rules/plexus-rules.md) |
+| Portão de qualidade | [rules/backend-quality-gate.md](../rules/backend-quality-gate.md) |
+
+As rules definem **o que** é obrigatório (workflow, camadas, KISS, naming, padrão de resposta gRPC); as skills detalham **como** fazer, sem duplicar a rule.
+
 ## Origem
 
 - `nestjs-grpc` une `nestjs-best-practices` (kadajett), `nestjs-patterns` (affaan-m/ecc) e `nestjs-expert` (jeffallan), adaptadas para gRPC + TypeORM.

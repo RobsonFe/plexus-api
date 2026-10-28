@@ -1,117 +1,146 @@
-# Arquitetura de módulos e DI
+# Arquitetura em camadas, módulos e DI
 
-Camada de [SKILL.md](SKILL.md). Carregar ao criar ou alterar `*.module.ts`, providers, imports/exports entre módulos, escopo ou tokens.
+Camada de [SKILL.md](SKILL.md). Carregar ao criar ou alterar `*.module.ts`, estrutura de pastas, camadas, providers, imports/exports entre módulos, escopo ou tokens. Regras obrigatórias: [plexus-rules.md §3–5](../../rules/plexus-rules.md#3-arquitetura-modular-camadas-versão-híbrida).
 
 Referência: [docs.nestjs.com/modules](https://docs.nestjs.com/modules) · [docs.nestjs.com/fundamentals/custom-providers](https://docs.nestjs.com/fundamentals/custom-providers)
 
-## 1. Módulos por feature
+## 1. Estrutura por módulo
 
-Organize por **domínio**, não por camada técnica.
+Organize por **domínio**, e dentro do domínio por **camada**.
 
 ```text
 src/
 ├── main.ts
-├── app.module.ts            # só importa módulos de feature + infra (Config, TypeORM)
-├── common/                  # filters, guards, interceptors, pipes compartilhados
-├── proto/                   # contratos .proto
+├── app.module.ts                  # só importa módulos de feature + infra (Config, TypeORM)
+├── common/                        # filters, guards, interceptors, pipes usados por 2+ módulos
+├── proto/                         # contratos .proto
 └── modules/
     └── clinical/
         ├── clinical.module.ts
-        ├── clinical.controller.ts      # gRPC (fino)
-        ├── clinical.service.ts
-        ├── entities/
-        ├── interfaces/                 # espelho do proto
-        └── dto/
+        ├── controller/clinical.controller.ts       # @Grpc* (fino)
+        ├── service/clinical.service.ts             # regra de negócio
+        ├── repository/clinical-record.repository.ts# único que conhece o TypeORM
+        ├── mapper/clinical-record.mapper.ts        # entity → mensagem proto
+        ├── dto/clinical-metadata.dto.ts
+        ├── entities/                               # *.entity.ts (decorators TypeORM)
+        ├── interfaces/clinical.interfaces.ts       # espelho do proto
+        └── test/                                   # *.spec.ts do módulo
 ```
 
-❌ `src/controllers/`, `src/services/`, `src/entities/` globais.
-❌ `AppModule` registrando controllers/providers de várias features.
+`validation/`, `constants/` e `contracts/` só são criadas quando têm conteúdo real (KISS). ❌ pasta vazia "para padronizar".
+
+❌ `src/controllers/`, `src/services/` globais. ❌ `AppModule` registrando controllers/providers de várias features.
 
 ```ts
 @Module({
   imports: [TypeOrmModule.forFeature([PatientEntity, ClinicalRecordEntity, MedicalFileEntity])],
   controllers: [ClinicalController],
-  providers: [ClinicalService],
+  providers: [ClinicalService, ClinicalRecordRepository],
 })
 export class ClinicalModule {}
 ```
 
-## 2. Compartilhamento entre módulos
+## 2. Camadas
 
-- Um provider pertence a **um** módulo. Outros módulos o recebem via `imports` + `exports`, nunca registrando a mesma classe de novo em `providers` (gera instâncias duplicadas e estado inconsistente).
-- Exporte só o que outro módulo realmente consome (sem over-exporting).
-- `@Global()` só para infra verdadeiramente transversal (config, logger). `ConfigModule` já é `isGlobal: true` aqui.
+```
+Controller ──► Service ──► Repository ──► TypeORM
+                  │
+                  └──► Mapper (entity → mensagem)
+```
 
-## 3. Dependências circulares
-
-- Ciclo entre módulos (`A imports B imports A`) é defeito de design. Corrija com:
-  1. extrair a parte comum para um terceiro módulo; ou
-  2. evento (`@nestjs/event-emitter`) quando é notificação "aconteceu X".
-- `forwardRef()` apenas como último recurso e com comentário explicando por quê.
-
-## 4. Responsabilidade única
-
-- Um service por responsabilidade de domínio. Sinais de "god service": >~300 linhas, muitos repositórios injetados, métodos sem relação entre si.
-- Para o upload clínico, separar quando crescer: orquestração (`ClinicalService`) ↔ I/O de disco (`MedicalFileStorage`) — o storage tem I/O externo, então justifica provider próprio (ver hierarquia em [SKILL.md](SKILL.md#código-enxuto-onde-implementar)).
-- Não crie um provider por função.
-
-## 5. Injeção de dependência
-
-**Sempre construtor:**
+| Camada | Injeta | Nunca injeta/importa |
+|--------|--------|----------------------|
+| Controller | Service | Repository, TypeORM |
+| Service | Repository, ConfigService, Logger | `typeorm`, `@InjectRepository`, `DataSource` |
+| Repository | `@InjectRepository(...)`, `DataSource` | Service, `RpcException` de regra de negócio |
+| Mapper | nada (métodos estáticos) | qualquer provider |
 
 ```ts
+// service — depende do repository do módulo, não do ORM
 @Injectable()
 export class ClinicalService {
   private readonly logger = new Logger(ClinicalService.name);
 
   constructor(
-    @InjectRepository(PatientEntity) private readonly patients: Repository<PatientEntity>,
-    private readonly dataSource: DataSource,
+    private readonly records: ClinicalRecordRepository,
     private readonly config: ConfigService,
   ) {}
 }
 ```
 
-- ❌ Propriedade com `@Inject()` escondendo dependência; ❌ `moduleRef.get()` como service locator dentro de lógica de negócio; ❌ `new OutroService()`.
-- `Logger` com contexto (`new Logger(Classe.name)`) é a exceção aceita de `new`.
+```ts
+// repository — único ponto com TypeORM
+@Injectable()
+export class ClinicalRecordRepository {
+  constructor(
+    @InjectRepository(ClinicalRecordEntity) private readonly records: Repository<ClinicalRecordEntity>,
+    private readonly dataSource: DataSource,
+  ) {}
+}
+```
 
-### Tokens para abstrações
+- O Repository expõe **métodos de domínio** (`saveRecordWithFile`, `findForPatient`), não um CRUD genérico que repassa `find`/`save`.
+- Um repository por agregado (ex.: `ClinicalRecordRepository` cuida de prontuário + arquivo + upsert de paciente no mesmo fluxo). Não crie um repository por tabela sem necessidade.
+- Mapper: classe com métodos estáticos ou funções exportadas, sem DI. Sem mapper genérico/reflexivo.
 
-Interfaces TS não existem em runtime, então não servem como token. Quando houver **duas implementações reais** (ex.: storage em disco local vs S3), use token:
+## 3. Compartilhamento entre módulos
+
+- Um provider pertence a **um** módulo. Outros o recebem via `imports` + `exports`, nunca registrando a mesma classe de novo (instâncias duplicadas).
+- Exporte só o que outro módulo realmente consome.
+- `@Global()` só para infra transversal (config, logger). `ConfigModule` já é `isGlobal: true`.
+
+## 4. Dependências circulares
+
+- Ciclo entre módulos é defeito de design: extraia a parte comum para um terceiro módulo ou use evento.
+- `forwardRef()` apenas como último recurso, com comentário explicando por quê.
+
+## 5. Responsabilidade única
+
+- Um service por responsabilidade de domínio. Sinais de god service: muitos repositories injetados, métodos sem relação entre si, métodos > 50 linhas.
+- Separar quando houver motivo real: ex. I/O de disco (`MedicalFileStorage`) vira provider próprio **se** for usado por 2+ services ou tiver implementações alternativas. Até lá, fica no service.
+- Não crie um provider por função.
+
+## 6. Injeção de dependência
+
+- **Sempre construtor**; ❌ propriedade com `@Inject()`, ❌ `moduleRef.get()` como service locator, ❌ `new OutroService()`.
+- `new Logger(Classe.name)` é a exceção aceita de `new`.
+
+### Tokens e `contracts/`
+
+Interfaces TS não existem em runtime. Token + interface em `contracts/` **só** quando houver duas implementações reais (ex.: storage local vs S3):
 
 ```ts
 export const FILE_STORAGE = Symbol('FILE_STORAGE');
-export interface FileStorage { createTemp(): Promise<WriteTarget>; commit(tmp: string, finalName: string): Promise<string>; }
+export interface FileStorage { commit(tmpPath: string, finalName: string): Promise<string>; }
 
 providers: [{ provide: FILE_STORAGE, useClass: LocalDiskStorage }]
 constructor(@Inject(FILE_STORAGE) private readonly storage: FileStorage) {}
 ```
 
-Com uma única implementação e nenhum plano concreto de segunda, injete a classe diretamente (evitar generalidade especulativa).
+Com uma implementação, injete a classe diretamente — ela já é mockável no `TestingModule`.
 
-- **ISP:** interfaces pequenas por capacidade, não um "IService" gordo.
-- **LSP:** implementações alternativas honram o mesmo contrato (mesmos erros, mesmas garantias); não lance `NotImplemented` em métodos herdados.
+- **ISP:** interfaces pequenas por capacidade. **LSP:** implementações alternativas honram o mesmo contrato (mesmos erros e garantias).
 
-## 6. Escopos de provider
+## 7. Escopos de provider
 
 | Escopo | Uso | Custo |
 |--------|-----|-------|
 | `DEFAULT` (singleton) | quase tudo | nenhum |
-| `REQUEST` | estado por requisição (raro) | instância por request **e propaga para quem o injeta** |
+| `REQUEST` | estado por requisição (raro) | instância por request e propaga para quem o injeta |
 | `TRANSIENT` | instância por consumidor | baixo |
 
-- Singleton **não** guarda estado de requisição em campo (`this.currentUser = ...`) — vaza entre chamadas concorrentes.
+- Singleton **não** guarda estado de requisição em campo (`this.currentUser = ...`).
 - Em gRPC, estado por chamada vai no argumento/metadata, não em provider `REQUEST`.
 
-## 7. Eventos para desacoplar
+## 8. Eventos
 
-Use `EventEmitter2` (`@nestjs/event-emitter`) para efeitos colaterais não críticos ("registro criado → auditoria/notificação"). Emitir **após** o commit da transação. O handler trata o próprio erro (não propaga ao emissor).
+`@nestjs/event-emitter` para efeitos colaterais não críticos ("registro criado → auditoria"), emitidos **após** o commit. Só introduza quando houver consumidor real.
 
-## 8. Lifecycle hooks
+## 9. Lifecycle hooks
 
-- `onModuleInit`/`onApplicationBootstrap` devem `await`/retornar a Promise; nada de fire-and-forget no boot.
-- `app.enableShutdownHooks()` + `onApplicationShutdown` para fechar recursos (ver [errors-observability.md](errors-observability.md)).
+- `onModuleInit`/`onApplicationBootstrap` aguardam/retornam a Promise; nada de fire-and-forget no boot.
+- `app.enableShutdownHooks()` + `onApplicationShutdown` para fechar recursos ([errors-observability.md](errors-observability.md)).
 
 ## Fonte
 
-Adaptado de `arch-*`, `di-*`, `perf-async-hooks` (kadajett/agent-nestjs-skills), `nestjs-patterns` (affaan-m/ecc) e `references/services-di.md` (jeffallan/claude-skills).
+Adaptado de `arch-*`, `di-*`, `perf-async-hooks` (kadajett/agent-nestjs-skills), `nestjs-patterns` (affaan-m/ecc), `references/services-di.md` (jeffallan/claude-skills) e das regras de camadas do Plexus.

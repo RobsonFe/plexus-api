@@ -15,7 +15,9 @@ Priorize bugs, segurança, gaps semânticos e testes ausentes. Smells de estilo 
 ## Primeiro pass: smells de LLM
 
 - Imports não usados; nomes genéricos (`data`, `result`, `item`, `temp`) onde caberia nome de domínio.
-- Comentários óbvios narrando o código (`// save the patient`), JSDoc que repete a assinatura.
+- **Helpers e funções auxiliares de uso único**, wrappers que só repassam, constantes usadas uma vez — o smell de LLM mais comum; reportar como **Obrigatório** (inline).
+- Comentários inline narrando o código (`// save the patient`) — proibidos fora das exceções ([plexus-rules.md §2.1](../../rules/plexus-rules.md#21-comentários-inline)); JSDoc que só repete a assinatura sem dizer responsabilidade/erros.
+- Service importando `typeorm`/`DataSource` "para resolver rápido" em vez de método no repository.
 - `try { ... } catch (e) { throw e; }` ou `catch` amplo sem tradução, recuperação ou log útil.
 - Cadeias `if/else`/`switch` onde um `Record<Enum, X>` ou mapa existente resolveria.
 - Helper reinventado que já existe em `src/common/` ou no próprio módulo.
@@ -60,7 +62,7 @@ Output de LLM costuma parecer seguro omitindo mitigações sutis. Sempre execute
 
 ### Concorrência e transações
 
-- Writes multi-tabela em `DataSource.transaction` usando o `manager`.
+- Writes multi-tabela num método atômico do repository (`DataSource.transaction` usando o `manager`).
 - Unique sob concorrência (CPF) tratado — upsert ou captura de `23505`.
 - Efeito fora do banco (mover arquivo, emitir evento) só após commit; compensação em falha.
 - Detalhe: [concurrency-review.md](concurrency-review.md).

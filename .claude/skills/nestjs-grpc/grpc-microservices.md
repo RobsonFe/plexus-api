@@ -34,6 +34,37 @@ Regras:
 - Versão no package (`v1`). Breaking change → `plexus.clinic.v2` em paralelo.
 - snake_case no proto; o loader converte para camelCase nas interfaces TS.
 
+### Padrão de resposta (`result` / `results`)
+
+Equivalente gRPC do envelope REST ([plexus-rules.md §7](../../rules/plexus-rules.md#7-padrão-de-resposta-grpc)):
+
+```proto
+message GetClinicalRecordResponse { ClinicalRecord result = 1; }
+
+message ListClinicalRecordsRequest { PageRequest page = 1; string patient_id = 2; }
+message ListClinicalRecordsResponse {
+  repeated ClinicalRecord results = 1;
+  PageMeta meta = 2;
+}
+
+message PageRequest { int32 page = 1; int32 limit = 2; }
+message PageMeta { int32 page = 1; int32 limit = 2; int64 total = 3; }
+```
+
+- Get → `result`; List → `results` + `meta` (paginação obrigatória, `limit` com teto no servidor).
+- RPC de comando (`SaveClinicalRecord`) → mensagem de resultado própria (`RecordUploadResponse`).
+- `PageRequest`/`PageMeta` vão num `.proto` comum (`src/proto/common.proto`) quando o segundo serviço precisar deles — antes disso, no próprio proto.
+
+### Naming
+
+| Elemento | Padrão |
+|----------|--------|
+| service | `ClinicalService` |
+| rpc | verbo + substantivo: `SaveClinicalRecord`, `GetClinicalRecord`, `ListClinicalRecords` |
+| mensagens | `<Rpc>Request` / `<Rpc>Response` |
+| campos | `snake_case` |
+| enum | `UPPER_SNAKE` com prefixo e zero `_UNSPECIFIED`: `FILE_STATUS_UNSPECIFIED = 0` |
+
 **Interface TS espelho** (em `interfaces/`): mesmos campos em camelCase, `oneof` como opcionais.
 
 ```ts
@@ -96,60 +127,64 @@ O nome do serviço no decorator deve ser exatamente o `service` do proto (`Clini
 `@GrpcStreamMethod` entrega um `Observable` que **não faz backpressure**: se o disco for mais lento que a rede, os chunks acumulam em memória. Para arquivos grandes, use `@GrpcStreamCall` com o stream cru do `grpc-js` e `pause()`/`resume()`.
 
 ```ts
+// controller — fino; @GrpcStreamCall entrega o erro ao callback (o filter não intercepta)
 @GrpcStreamCall('ClinicalService', 'SaveClinicalRecord')
-saveClinicalRecord(
-  call: ServerReadableStream<RecordUploadStream, RecordUploadResponse>,
-  callback: sendUnaryData<RecordUploadResponse>,
-): void {
-  this.clinicalService.handleUpload(call).then(
+saveClinicalRecord(call: ClinicalUploadCall, callback: sendUnaryData<RecordUploadResponse>): void {
+  this.clinicalService.saveClinicalRecord(call).then(
     (res) => callback(null, res),
-    (err: unknown) => callback(toGrpcError(err), null),
+    (err: unknown) => callback(toGrpcError(err), null), // mesma função usada pelo filter global
   );
 }
 ```
 
 ```ts
-// service — esqueleto do fluxo
-async handleUpload(call: ServerReadableStream<RecordUploadStream, unknown>): Promise<RecordUploadResponse> {
-  let metadata: ClinicalMetadata | undefined;
+// service — fluxo direto, sem helpers de uso único
+async saveClinicalRecord(call: ClinicalUploadCall): Promise<RecordUploadResponse> {
+  const tmpPath = join(this.storageDir, `${randomUUID()}.part`);
+  let metadata: ClinicalMetadataDto | undefined;
   let file: WriteStream | undefined;
   let totalBytes = 0;
-  const tmpPath = this.storage.newTempPath();
 
   try {
-    for await (const frame of call) {          // async iterator respeita backpressure
+    for await (const frame of call) { // async iterator respeita backpressure
       if (!metadata) {
-        if (!frame.metadata) throw invalid('First frame must be metadata');
+        if (!frame.metadata) throw new RpcException({ code: status.INVALID_ARGUMENT, message: 'O primeiro frame deve conter os metadados' });
         metadata = await this.validateMetadata(frame.metadata);
         file = createWriteStream(tmpPath, { flags: 'wx' });
         continue;
       }
-      if (!frame.chunk) throw invalid('Metadata sent twice');
+      if (!frame.chunk) throw new RpcException({ code: status.INVALID_ARGUMENT, message: 'Metadados enviados mais de uma vez' });
       totalBytes += frame.chunk.data.length;
-      if (totalBytes > this.maxBytes) throw tooLarge();
+      if (totalBytes > this.maxBytes) throw new RpcException({ code: status.RESOURCE_EXHAUSTED, message: 'Arquivo excede o limite de 100MB' });
       if (!file!.write(frame.chunk.data)) await once(file!, 'drain');
     }
-    if (!metadata || !file) throw invalid('Empty stream');
+    if (!metadata || !file) throw new RpcException({ code: status.INVALID_ARGUMENT, message: 'Nenhum dado recebido' });
     await finished(file.end());
-    return await this.persistRecord(metadata, tmpPath, totalBytes); // transação + move final
+
+    const finalPath = join(this.storageDir, `${randomUUID()}${EXTENSION_BY_MIME[metadata.fileMimeType]}`);
+    const record = await this.records.saveRecordWithFile({ ...metadata, diskPath: finalPath, sizeBytes: totalBytes });
+    await rename(tmpPath, finalPath); // após o commit
+    return ClinicalRecordMapper.toUploadResponse(record, totalBytes);
   } catch (err) {
     file?.destroy();
-    await rm(tmpPath, { force: true });       // nunca deixar arquivo parcial órfão
+    await rm(tmpPath, { force: true }); // nunca deixar arquivo parcial órfão
     throw err;
   }
 }
 ```
 
+`ClinicalUploadCall` é o alias `ServerReadableStream<RecordUploadStream, RecordUploadResponse>` em `interfaces/`. `EXTENSION_BY_MIME` fica em `constants/` porque é usado pela validação de MIME e pelo nome do arquivo (2 usos). Se o método passar de 50 linhas, extraia **um** método privado com nome de domínio (ex.: `receiveFile`), não vários helpers genéricos.
+
 Checklist do fluxo:
 
 - [ ] Primeiro frame **obrigatoriamente** `metadata`; validar com `class-validator` antes de abrir o arquivo.
 - [ ] Contar bytes acumulados e abortar acima do limite (100MB — RF03), **antes** de escrever.
-- [ ] Escrever em path temporário; mover para o path final só após commit no banco (ou registrar `status` em `medical_files`).
+- [ ] Escrever em path temporário; mover para o path final só após commit no banco (ou registrar `status` em `medical_files`). Se o `rename` falhar após o commit, o registro aponta para arquivo inexistente: tratar com `status` ou rotina de reconciliação ([review/concurrency-review.md](../review/concurrency-review.md)).
 - [ ] Em erro ou cancelamento (`call.on('cancelled')` / exceção no iterator): destruir write stream e apagar temporário.
 - [ ] Nome do arquivo em disco gerado pelo servidor (UUID + extensão permitida). **Nunca** usar `fileName` do cliente no path.
 - [ ] MIME validado por allowlist (e magic bytes quando crítico), não pela extensão.
 - [ ] `maxReceiveMessageLength` limita **cada mensagem**; o tamanho total é controle seu.
-- [ ] Persistir no banco só metadados + caminho (RNF03).
+- [ ] Persistir no banco só metadados + caminho (RNF03), via método atômico do repository ([typeorm-database.md](typeorm-database.md#4-transações-o-service-pede-o-repository-executa)).
 
 ## 5. Metadata, deadlines e cancelamento
 

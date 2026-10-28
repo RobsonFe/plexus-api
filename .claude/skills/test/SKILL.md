@@ -34,7 +34,7 @@ Pedido de teste
 | TDD | RED-GREEN-REFACTOR, bug novo | [tdd.md](tdd.md) |
 | Testes honestos | espelho, assert em mock, mutação | [good-tests.md](good-tests.md) |
 | Cobertura | `test:cov`, linhas faltando | [coverage.md](coverage.md) |
-| Unit NestJS | `Test.createTestingModule`, `getRepositoryToken`, `DataSource`, tmp dir | [nest-unit.md](nest-unit.md) |
+| Unit por camada | Service (repository mockado), Repository (mock do TypeORM), Mapper, Controller (delegação), tmp dir | [nest-unit.md](nest-unit.md) |
 | gRPC e e2e | `ServerReadableStream` falso, `RpcException`, cliente `@grpc/grpc-js`, `supertest` | [grpc.md](grpc.md) |
 
 Exemplos do domínio: [examples.md](examples.md).
@@ -53,7 +53,7 @@ Exemplos do domínio: [examples.md](examples.md).
 
 1. **Contrato** — mensagem de resposta, status gRPC (`code`), efeito no banco, efeito em disco.
 2. **Matriz** — listar ramos; preencher [scenarios.md](scenarios.md).
-3. **Nível** — unit (service com dependências mockadas na fronteira) e/ou e2e (cliente gRPC real contra o app).
+3. **Nível** — unit por camada (service com repository mockado; repository com mock do TypeORM; controller testando delegação) e/ou e2e (cliente gRPC real contra o app e banco de teste). Unit **nunca** com banco real ([plexus-rules.md §12](../../rules/plexus-rules.md#12-testes)).
 4. **Escrever** — TDD quando couber; expected literal ([good-tests.md](good-tests.md)).
 5. **Executar** — comandos abaixo; reportar comando e escopo.
 6. **Não concluir** com só teste manual (grpcurl/Postman) ou happy path único sem os erros declarados.
@@ -71,7 +71,7 @@ Além do caminho feliz ([scenarios.md](scenarios.md)):
 
 | Escopo | Comando |
 |--------|---------|
-| Unit — um arquivo | `npm test -- src/modules/clinical/clinical.service.spec.ts` |
+| Unit — um arquivo | `npm test -- src/modules/clinical/test/clinical.service.spec.ts` |
 | Unit — por nome | `npm test -- -t "rejects chunk before metadata"` |
 | Unit — tudo | `npm test` |
 | E2E | `npm run test:e2e` (ou `npm run test:e2e -- test/clinical.e2e-spec.ts`) |
@@ -84,7 +84,8 @@ Os scripts já rodam o Jest com `node --experimental-vm-modules`; não chame `np
 
 - **Bug:** reproduz a falha original (ex.: chunk antes de metadata → antes estourava `TypeError`, agora `INVALID_ARGUMENT`).
 - **Feature:** feliz com resposta + banco + disco, e os erros da matriz (validação, auth, escopo, tamanho, falha de banco, cancelamento).
-- **Mock:** fronteira (Repository/`DataSource`, cliente gRPC externo, relógio). Disco: diretório temporário real, não `fs` mockado.
+- **Mock:** fronteira da camada sob teste (repository do módulo para o service; TypeORM para o repository; cliente gRPC externo; relógio). Disco: diretório temporário real, não `fs` mockado.
+- **Specs:** em `src/modules/<feature>/test/`; fixtures fictícias em `test/fixtures.ts` (reutilizadas, então não são "helpers de uso único").
 
 ## Exceções
 

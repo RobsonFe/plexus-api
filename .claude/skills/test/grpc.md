@@ -30,7 +30,7 @@ function failingCall(frames: RecordUploadStream[], error: Error) {
 
 `@GrpcStreamMethod` recebe `Observable`: use `from([...])` do RxJS ou um `Subject` para emitir e errar no meio (`subject.error(new Error('cancelled'))`).
 
-Guarde `fakeUploadCall`, `chunk` e `validMetadata` (com CPF **fictício**) num helper de teste do módulo (ex.: `src/modules/clinical/testing/fixtures.ts`), nunca em código de produção.
+Guarde `fakeUploadCall`, `chunk` e `validMetadata` (com CPF **fictício**) num helper de teste do módulo (ex.: `src/modules/clinical/test/fixtures.ts`), nunca em código de produção.
 
 ## Handler (controller) unit
 
@@ -38,7 +38,7 @@ O controller é fino, então o teste dele é curto: confirma que o `callback` re
 
 ```ts
 it('passes a gRPC error to the callback when the service fails', async () => {
-  clinicalService.handleUpload.mockRejectedValueOnce(new RpcException({ code: status.INVALID_ARGUMENT, message: 'x' }));
+  clinicalService.saveClinicalRecord.mockRejectedValueOnce(new RpcException({ code: status.INVALID_ARGUMENT, message: 'x' }));
   const callback = jest.fn();
 
   controller.saveClinicalRecord(fakeUploadCall([]), callback);

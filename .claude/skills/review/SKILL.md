@@ -126,14 +126,25 @@ Regras de reporte:
 
 ## Revisão de arquitetura (núcleo)
 
-- Módulo por feature; `AppModule` só compõe. Sem ciclo entre módulos; `forwardRef` justificado.
-- Controllers (gRPC/HTTP) finos; regra de negócio em service; sem `Repository` no controller.
+Regras de referência: [plexus-rules.md](../../rules/plexus-rules.md) §§1, 3–7.
+
+- **Código enxuto (KISS) — achado Obrigatório, não Sugestão:**
+  - helper, função auxiliar, `utils.ts`, wrapper ou constante de **uso único** → pedir inline;
+  - método que só repassa para outra camada sem agregar nada → remover;
+  - abstração especulativa (token/interface/factory com uma implementação, parâmetro que ninguém usa, pasta vazia "para padronizar") → remover.
+  Confirme o uso único com Grep antes de reportar.
+- **Camadas (Controller → Service → Repository, + Mapper) — violação é Obrigatório:**
+  - Service importando `typeorm`, `Repository<T>`, `DataSource` ou `@InjectRepository`;
+  - Controller acessando repository/banco ou com regra de negócio;
+  - Repository com regra de negócio;
+  - entity TypeORM devolvida ao cliente sem Mapper.
+- Módulo por feature, pastas por camada; `AppModule` só compõe. Sem ciclo entre módulos; `forwardRef` justificado.
 - DI por construtor; nada de `new` em `@Injectable`; singleton sem estado de requisição.
-- Proto é o contrato: interface TS espelha o `.proto` no mesmo diff.
-- KISS: sinalizar abstração especulativa (token/interface com uma implementação, repository que só repassa).
+- Proto é o contrato: interface TS espelha o `.proto` no mesmo diff; Get → `result`, List → `results` + `meta`.
 
 ## Revisão de banco (núcleo)
 
+- Queries e transações só no repository; o service pede um método atômico (`saveRecordWithFile`).
 - Escrita multi-tabela atômica em `DataSource.transaction` usando o `manager`.
 - Sem I/O lento (stream do arquivo) dentro da transação.
 - Sem N+1; listagens com limite; queries parametrizadas.
@@ -174,8 +185,11 @@ Trate todo input externo como hostil, todo segredo como sagrado e toda autoriza�
 ## Revisão de qualidade (núcleo)
 
 - TypeScript `strict` respeitado: sem `any` novo, sem `as` para calar erro real, sem `!` desnecessário.
-- Nomes de funções operacionais em inglês (RNF04); consistência com o módulo vizinho.
-- Sem `console.log` (usar `Logger` com contexto); sem comentário narrando código óbvio.
+- Código, nomes e testes em inglês (RNF04); mensagens ao cliente (`RpcException`, validação) e comentários em **PT-BR**.
+- **JSDoc** obrigatório em método público de service, repository, mapper e função exportada (`@param`, `@returns`, `@throws`) — ausência é Obrigatório.
+- Métodos < 30 linhas (ideal), **> 50 linhas é Obrigatório**; aninhamento profundo → guard clauses.
+- Comentário inline só para decisão não óbvia, workaround ou limitação externa; comentário narrando código é achado.
+- Sem `console.log` (usar `Logger` com contexto).
 - `try/catch` só com tradução/recuperação real; erros não engolidos.
 
 ## Testes de regressão (obrigatório)
@@ -208,6 +222,8 @@ Nunca concluir a review com lint, typecheck ou testes falhando no escopo alterad
 - [ ] `.proto` compatível com clientes existentes (ou versão nova); interface TS alinhada.
 - [ ] Streaming: primeiro frame validado, limite total, cleanup em erro/cancelamento, sem buffer do arquivo inteiro.
 - [ ] Transações corretas; efeitos fora do banco após commit; sem N+1.
+- [ ] Código enxuto: nenhum helper/wrapper de uso único nem abstração especulativa.
+- [ ] Camadas respeitadas (Service sem TypeORM; Mapper na saída); JSDoc nos métodos públicos.
 - [ ] Teste de regressão presente e executado; lint e typecheck verdes.
 
 ## Quando chamar outra skill

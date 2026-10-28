@@ -17,6 +17,19 @@ Regras de implementação de referência: [`nestjs-grpc`](../nestjs-grpc/SKILL.m
 
 ## Checklist
 
+### Código enxuto (KISS) — Obrigatório
+- [ ] Nenhum helper, função auxiliar, `utils.ts`, wrapper ou constante de **uso único** (confirmar com Grep) → inline.
+- [ ] Nenhum método que só repassa para a camada seguinte sem agregar nada.
+- [ ] Nenhuma abstração especulativa (token/interface/factory com uma implementação; parâmetro sem uso; pasta vazia).
+- [ ] Solução usa o que NestJS/TypeORM/Node já oferecem antes de código próprio.
+
+### Camadas
+- [ ] Estrutura `controller/`, `service/`, `repository/`, `mapper/`, `dto/`, `entities/`, `interfaces/`, `test/`.
+- [ ] Service não importa `typeorm`, `Repository<T>`, `DataSource`, `@InjectRepository`.
+- [ ] Repository expõe métodos de domínio, sem regra de negócio; único com TypeORM.
+- [ ] Mapper converte entity → mensagem (Get `result`, List `results` + `meta`); nenhuma entity crua sai do service.
+- [ ] JSDoc em métodos públicos de service, repository e mapper.
+
 ### Módulos
 - [ ] Cada feature tem seu módulo; `AppModule` só compõe.
 - [ ] Exporta só o que outro módulo consome.
@@ -68,6 +81,10 @@ Regras de implementação de referência: [`nestjs-grpc`](../nestjs-grpc/SKILL.m
 
 | ❌ Anti-pattern | Por que | ✅ Correção |
 |----------------|---------|------------|
+| Helper/wrapper de uso único | indireção sem ganho, mais código para ler | inline no método |
+| Abstração especulativa | complexidade para necessidade inexistente | remover até haver 2ª implementação |
+| Service importando TypeORM | acopla regra ao ORM, viola `Arch:C->S->R` | mover query para o repository |
+| Entity devolvida ao cliente | vaza colunas internas/sensíveis | Mapper |
 | Fat controller | testabilidade, reuso entre HTTP e gRPC | mover para service |
 | `Repository` no controller | acopla transporte à persistência | service intermediário |
 | God service | difícil testar e mudar | dividir por responsabilidade |
@@ -93,10 +110,10 @@ async getRecord(data: any) {
   }
 }
 
-// ✅ fino, tipado, validado, autorizado no service
-@GrpcMethod('ClinicalService', 'GetRecord')
-getRecord(data: GetRecordRequestDto, metadata: Metadata): Promise<GetRecordResponse> {
-  return this.clinicalService.getRecord(data.recordId, userIdFrom(metadata));
+// ✅ fino, tipado, validado; autorização no service, query no repository, resposta pelo mapper
+@GrpcMethod('ClinicalService', 'GetClinicalRecord')
+getClinicalRecord(data: GetClinicalRecordRequestDto, metadata: Metadata): Promise<GetClinicalRecordResponse> {
+  return this.clinicalService.getClinicalRecord(data.recordId, String(metadata.get('x-user-id')[0]));
 }
 ```
 
