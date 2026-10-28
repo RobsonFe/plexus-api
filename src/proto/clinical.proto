@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package plexus.clinic.v1;
+
+service ClinicalService {
+  rpc SaveClinicalRecord (stream RecordUploadStream) returns (RecordUploadResponse);
+}
+
+message RecordUploadStream {
+  oneof payload {
+    ClinicalMetadata metadata = 1;
+    FileChunk chunk = 2;
+  }
+}
+
+message ClinicalMetadata {
+  string patient_full_name = 1;
+  string patient_cpf = 2;
+  string patient_phone = 3;
+  string doctor_notes = 4;
+  string file_name = 5;
+  string file_mime_type = 6;
+}
+
+message FileChunk {
+  bytes data = 1;
+}
+
+message RecordUploadResponse {
+  string record_id = 1;
+  string file_path = 2;
+  int64 total_bytes = 3;
+  bool success = 4;
+}
