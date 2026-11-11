@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsIn, Length, Matches } from 'class-validator';
+import { EXTENSION_BY_MIME } from '../constants/clinical.constants';
 import { ClinicalMetadata } from '../interfaces/clinical.interfaces';
 import { IsCpf } from '../validation/is-cpf.decorator';
 
@@ -24,7 +25,7 @@ export class ClinicalMetadataDto implements ClinicalMetadata {
   @Length(1, 255, { message: 'fileName deve ter entre 1 e 255 caracteres' })
   public fileName: string;
 
-  @IsIn(['application/pdf', 'image/png', 'image/jpeg'], {
+  @IsIn(Object.keys(EXTENSION_BY_MIME), {
     message: 'fileMimeType deve ser PDF, PNG ou JPEG',
   })
   public fileMimeType: string;

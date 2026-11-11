@@ -1,7 +1,10 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule, ObserveInstrument } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { MicroserviceOptions } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { createGrpcOptions } from './grpc.options';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -44,6 +47,12 @@ async function bootstrap() {
             },
         }),
     );
+
+    app.connectMicroservice<MicroserviceOptions>(
+        createGrpcOptions(app.get(ConfigService)),
+        { inheritAppConfig: true },
+    );
+    await app.startAllMicroservices();
 
     await app.listen(process.env.PORT ?? 8080);
 
