@@ -1,3 +1,5 @@
+import type { ServerReadableStream } from '@grpc/grpc-js';
+
 /**
  * Metadata payload sent in the initial frame of the clinical upload stream.
  */
@@ -34,3 +36,11 @@ export interface RecordUploadResponse {
   totalBytes: number;
   success: boolean;
 }
+
+/**
+ * Raw gRPC client stream of the clinical upload.
+ */
+export type ClinicalUploadCall = ServerReadableStream<
+  RecordUploadStream,
+  RecordUploadResponse
+>;

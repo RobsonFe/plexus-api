@@ -4,6 +4,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { ClinicalModule } from './modules/clinical/module/clinical.module';
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -33,6 +34,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         synchronize: false, // Set to true only in development; use migrations in production
       }),
     }),
+    ClinicalModule,
   ],
   controllers: [AppController],
   providers: [AppService],

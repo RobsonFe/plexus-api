@@ -44,6 +44,9 @@ lerna-debug.log*
 .env.test.local
 .env.production.local
 
+# uploaded medical files
+/storage
+
 # temp directory
 .temp
 .tmp
