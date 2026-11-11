@@ -30,7 +30,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         password: configService.get<string>('DB_PASSWORD', 'plexus'),
         database: configService.get<string>('DB_DATABASE', 'plexusdb'),
         autoLoadEntities: true,
-        synchronize: true,
+        synchronize: false, // Set to true only in development; use migrations in production
       }),
     }),
   ],
