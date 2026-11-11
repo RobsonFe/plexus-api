@@ -9,7 +9,7 @@ import {
 import { ClinicalRecordEntity } from './clinical-record.entity';
 
 /**
- * Represents metadata and physical storage location for an uploaded medical file.
+ * Representa os metadados e o local físico de armazenamento de um arquivo médico enviado.
  */
 @Entity({ name: 'medical_files' })
 export class MedicalFileEntity {

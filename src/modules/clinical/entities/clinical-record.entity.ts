@@ -11,7 +11,7 @@ import { PatientEntity } from './patient.entity';
 import { MedicalFileEntity } from './medical-file.entity';
 
 /**
- * Represents a clinical consultation record associated with a specific patient.
+ * Representa o prontuário de uma consulta, associado a um paciente.
  */
 @Entity({ name: 'clinical_records' })
 export class ClinicalRecordEntity {

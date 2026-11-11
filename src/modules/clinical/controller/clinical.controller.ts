@@ -8,7 +8,7 @@ import type {
 import { ClinicalService } from '../service/clinical.service';
 
 /**
- * gRPC Controller handling incoming remote procedure calls for the ClinicalService.
+ * Controller gRPC que atende as chamadas do `ClinicalService`.
  */
 @Controller()
 export class ClinicalController {

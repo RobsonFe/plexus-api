@@ -8,7 +8,7 @@ import { ClinicalRecordEntity } from '../entities/clinical-record.entity';
 import { MedicalFileEntity } from '../entities/medical-file.entity';
 
 /**
- * Encapsulates clinical domain logic, gRPC controllers, and TypeORM entities.
+ * Agrupa a lógica do domínio clínico, os controllers gRPC e as entities do TypeORM.
  */
 @Module({
   imports: [

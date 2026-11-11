@@ -1,7 +1,7 @@
 import type { ServerReadableStream } from '@grpc/grpc-js';
 
 /**
- * Metadata payload sent in the initial frame of the clinical upload stream.
+ * Metadados enviados no frame inicial do stream de upload clínico.
  */
 export interface ClinicalMetadata {
   patientFullName: string;
@@ -13,14 +13,14 @@ export interface ClinicalMetadata {
 }
 
 /**
- * Binary chunk payload representing a slice of the uploaded medical file.
+ * Trecho binário de um arquivo médico enviado.
  */
 export interface FileChunk {
   data: Buffer;
 }
 
 /**
- * Union message received per frame during the gRPC client stream.
+ * União das mensagens recebidas em cada frame do client stream gRPC.
  */
 export interface RecordUploadStream {
   metadata?: ClinicalMetadata;
@@ -28,7 +28,7 @@ export interface RecordUploadStream {
 }
 
 /**
- * Final summary returned to the client once the stream completes and persists.
+ * Resumo devolvido ao cliente quando o stream termina e os dados são persistidos.
  */
 export interface RecordUploadResponse {
   recordId: string;
@@ -38,7 +38,7 @@ export interface RecordUploadResponse {
 }
 
 /**
- * Raw gRPC client stream of the clinical upload.
+ * Client stream gRPC cru do upload clínico.
  */
 export type ClinicalUploadCall = ServerReadableStream<
   RecordUploadStream,

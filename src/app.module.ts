@@ -14,8 +14,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
       isGlobal: true,
       envFilePath: ['.env.local', '.env'],
     }),
-    // Distributed tracing, auto-correlated logs, request/job metrics, error
-    // telemetry, alarms, and more — out of the box. Sign up at https://observe.nestjs.com
+    // Rastreamento distribuído, logs correlacionados automaticamente, métricas de requisições e jobs,
+    // telemetria de erros, alarmes e muito mais, prontos para uso. Cadastre-se em https://observe.nestjs.com
     ObserveModule.forRoot({
       appKey: 'YOUR_APP_KEY',
       appSecret: 'YOUR_APP_SECRET',
@@ -31,7 +31,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         password: configService.get<string>('DB_PASSWORD', 'plexus'),
         database: configService.get<string>('DB_DATABASE', 'plexusdb'),
         autoLoadEntities: true,
-        synchronize: false, // Set to true only in development; use migrations in production
+        synchronize: false, // Use true apenas em desenvolvimento; em produção, use migrations
       }),
     }),
     ClinicalModule,

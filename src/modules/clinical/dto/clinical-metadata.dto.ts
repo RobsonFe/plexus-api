@@ -5,7 +5,7 @@ import { ClinicalMetadata } from '../interfaces/clinical.interfaces';
 import { IsCpf } from '../validation/is-cpf.decorator';
 
 /**
- * Validated DTO for the metadata payload sent in the first frame of the upload stream.
+ * DTO validado dos metadados enviados no primeiro frame do stream de upload.
  */
 export class ClinicalMetadataDto implements ClinicalMetadata {
   @Length(3, 255, { message: 'patientFullName deve ter entre 3 e 255 caracteres' })

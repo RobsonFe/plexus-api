@@ -8,7 +8,7 @@ import {
 import { ClinicalRecordEntity } from './clinical-record.entity';
 
 /**
- * Represents a patient registered in the Plexus clinical platform.
+ * Representa um paciente cadastrado na plataforma clínica Plexus.
  */
 @Entity({ name: 'patients' })
 export class PatientEntity {
