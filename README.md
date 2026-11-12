@@ -48,3 +48,82 @@ Para garantir que o código tenha qualidade de software sênior desde o dia zero
 2. **Documentação Profissional:** Proibido o uso de comentários *inline* para explicar código óbvio. Utilizaremos **docstrings** completas e formatadas nas assinaturas de classes, interfaces e métodos para que a IDE (Cursor/Windsurf/VSCode) possa fornecer inteligência de contexto.
 3. **Acesso a Dados Otimizado:** Vamos evitar o overhead de ORMs tradicionais em consultas de leitura complexas. Priorizaremos estratégias de *Fast-Path querysets* direto no banco, prevenindo o problema de *N+1 queries* logo na modelagem estrutural.
 4. **Isolamento de Domínio:** O Monorepo será fatiado de forma que o frontend não conheça regras de negócio e o backend não conheça regras de renderização. O único elo de acoplamento será o pacote compartilhado `packages/contracts` (onde viverão os arquivos `.proto`).
+
+## 6. Como executar o projeto
+
+### Pré-requisitos
+
+* Node.js 24+
+* npm
+* Docker e Docker Compose
+
+### 1. Instalar as dependências
+
+```bash
+npm install
+```
+
+### 2. Configurar as variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto. Ele é lido pela aplicação e pelo CLI de migrations. Um `.env.local`, se existir, sobrescreve os valores apenas na aplicação.
+
+```env
+PORT=8080
+DB_HOST=localhost
+DB_PORT=5433
+DB_USERNAME=plexus
+DB_PASSWORD=plexus
+DB_DATABASE=plexusdb
+```
+
+| Variável | Padrão | Descrição |
+|----------|--------|-----------|
+| `PORT` | `8080` | Porta HTTP (Swagger) |
+| `DB_HOST` | `localhost` | Host do PostgreSQL |
+| `DB_PORT` | `5433` | Porta do PostgreSQL exposta pelo Docker |
+| `DB_USERNAME` | `plexus` | Usuário do banco |
+| `DB_PASSWORD` | `plexus` | Senha do banco |
+| `DB_DATABASE` | `plexusdb` | Nome do banco |
+| `GRPC_URL` | `localhost:50051` | Endereço do servidor gRPC (opcional) |
+| `NODE_ENV` | — | Com `production`, o reflection gRPC fica desligado (opcional) |
+
+### 3. Subir o banco de dados
+
+```bash
+docker compose up -d
+```
+
+Sobe o PostgreSQL 17 na porta `5433` e o pgAdmin em `http://localhost:5050` (login `admin@plexus.com` / `plexus`).
+
+### 4. Rodar as migrations
+
+```bash
+npm run migration:run
+```
+
+| Script | Descrição |
+|--------|-----------|
+| `npm run migration:run` | Aplica as migrations pendentes |
+| `npm run migration:revert` | Desfaz a última migration aplicada |
+| `npm run migration:show` | Lista as migrations e o status (`[X]` aplicada) |
+| `npm run migration:generate -- src/database/migrations/<Nome>` | Gera uma migration a partir da diferença entre as entities e o banco |
+| `npm run migration:create -- src/database/migrations/<Nome>` | Cria uma migration vazia |
+
+### 5. Iniciar a API
+
+```bash
+npm run start:dev
+```
+
+* HTTP: `http://localhost:8080`
+* Swagger: `http://localhost:8080/doc`
+* gRPC: `localhost:50051`, com reflection habilitado fora de produção (ex.: `grpcurl -plaintext localhost:50051 list`)
+
+### Qualidade e testes
+
+```bash
+npm run lint
+npx tsc --noEmit -p tsconfig.json
+npm test
+npm run test:e2e
+```
