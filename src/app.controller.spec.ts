@@ -15,8 +15,10 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Hello World!"', () => {
-      expect(appController.getHello()).toBe('Hello World!');
+    it('returns the welcome message', () => {
+      expect(appController.getHello()).toBe(
+        'Olá, Plexus! Bem-vindo à API de estudo de gRCP Fullstack e novo projeto de estudo de NestJS com TypeScript, PostgreSQL, Redis, Docker, Swagger e JWT.',
+      );
     });
   });
 });

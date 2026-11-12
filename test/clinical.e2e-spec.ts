@@ -24,6 +24,7 @@ import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
 import { CreateClinicalTables1794359808538 } from '../src/database/migrations/1794359808538-CreateClinicalTables';
+import { AddPatientsDeletedAt1794452947973 } from '../src/database/migrations/1794452947973-AddPatientsDeletedAt';
 import { createGrpcOptions } from '../src/grpc.options';
 import {
   RecordUploadResponse,
@@ -55,12 +56,13 @@ describe('ClinicalService (e2e gRPC)', () => {
   const storage = mkdtempSync(join(tmpdir(), 'plexus-e2e-'));
   let app: INestApplication;
   let dataSource: DataSource;
-  let client: ClinicalClient;
+  let client: ClinicalClient | undefined;
 
   const upload = (frames: RecordUploadStream[]) =>
     new Promise<RecordUploadResponse>((resolve, reject) => {
-      const call = client.saveClinicalRecord((error, response) =>
-        error || !response ? reject(error as Error) : resolve(response),
+      const call = (client as ClinicalClient).saveClinicalRecord(
+        (error, response) =>
+          error || !response ? reject(error as Error) : resolve(response),
       );
       frames.forEach((frame) => call.write(frame));
       call.end();
@@ -102,13 +104,14 @@ describe('ClinicalService (e2e gRPC)', () => {
     await dataSource.query(
       'DROP TABLE IF EXISTS medical_files, clinical_records, patients CASCADE',
     );
-    await new CreateClinicalTables1794359808538().up(
-      dataSource.createQueryRunner(),
-    );
+    const queryRunner = dataSource.createQueryRunner();
+    await new CreateClinicalTables1794359808538().up(queryRunner);
+    await new AddPatientsDeletedAt1794452947973().up(queryRunner);
+    await queryRunner.release();
 
     const pkg = loadPackageDefinition(
       loadSync(
-        join(__dirname, '../src/proto/clinical.proto'),
+        join(__dirname, '../src/modules/clinical/proto/clinical.proto'),
         grpcOptions.options.loader,
       ),
     ) as unknown as {
@@ -127,8 +130,8 @@ describe('ClinicalService (e2e gRPC)', () => {
   });
 
   afterAll(async () => {
-    client.close();
-    await app.close();
+    client?.close();
+    await app?.close();
     rmSync(storage, { recursive: true, force: true, maxRetries: 5 });
   });
 
@@ -192,7 +195,7 @@ describe('ClinicalService (e2e gRPC)', () => {
   });
 
   it('marks the upload as failed and removes the file when the client cancels', async () => {
-    const call = client.saveClinicalRecord(() => undefined);
+    const call = (client as ClinicalClient).saveClinicalRecord(() => undefined);
     call.write({ metadata });
     call.write(chunk(10));
     await waitForStatus('uploading');
@@ -201,5 +204,26 @@ describe('ClinicalService (e2e gRPC)', () => {
 
     await waitForStatus('failed');
     expect(readdirSync(storage)).toEqual([]);
+  });
+
+  it('reactivates a soft-deleted patient on a new upload with the same cpf', async () => {
+    await upload([{ metadata }, chunk(10)]);
+    await dataSource.query('UPDATE patients SET deleted_at = now()');
+
+    await upload([
+      { metadata: { ...metadata, patientFullName: 'Paciente Reativado' } },
+      chunk(10),
+    ]);
+
+    const rows = (await dataSource.query(
+      'SELECT full_name, deleted_at FROM patients',
+    )) as Array<{ full_name: string; deleted_at: Date | null }>;
+    expect(rows).toEqual([
+      { full_name: 'Paciente Reativado', deleted_at: null },
+    ]);
+    const [{ count }] = (await dataSource.query(
+      'SELECT count(*)::int AS count FROM clinical_records',
+    )) as Array<{ count: number }>;
+    expect(count).toBe(2);
   });
 });

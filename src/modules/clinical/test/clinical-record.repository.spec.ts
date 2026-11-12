@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { ClinicalMetadataDto } from '../dto/clinical-metadata.dto';
 import { ClinicalRecordEntity } from '../entities/clinical-record.entity';
 import { MedicalFileEntity } from '../entities/medical-file.entity';
-import { PatientEntity } from '../entities/patient.entity';
+import { PatientEntity } from '../../patient/entities/patient.entity';
 import { ClinicalRecordRepository } from '../repository/clinical-record.repository';
 
 const metadata: ClinicalMetadataDto = {
@@ -76,7 +76,12 @@ describe('ClinicalRecordRepository', () => {
       fullName: 'Paciente Teste',
       documentCpf: '11144477735',
       phone: '81999990000',
+      deletedAt: null,
     });
+    expect(queryBuilder.orUpdate).toHaveBeenCalledWith(
+      ['full_name', 'phone', 'deleted_at'],
+      ['document_cpf'],
+    );
     expect(manager.insert.mock.calls).toEqual([
       [
         ClinicalRecordEntity,

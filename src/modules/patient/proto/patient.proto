@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package plexus.patient.v1;
+
+service PatientService {
+  rpc CreatePatient (CreatePatientRequest) returns (GetPatientResponse);
+  rpc GetPatient    (GetPatientRequest)    returns (GetPatientResponse);
+  rpc ListPatients  (ListPatientsRequest)  returns (ListPatientsResponse);
+  rpc UpdatePatient (UpdatePatientRequest) returns (GetPatientResponse);
+  rpc DeletePatient (DeletePatientRequest) returns (DeletePatientResponse);
+}
+
+message Patient {
+  string id = 1;
+  string full_name = 2;
+  string phone = 3;
+  string created_at = 4;
+}
+
+message PageRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PageMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int64 total = 3;
+}
+
+message CreatePatientRequest {
+  string full_name = 1;
+  string cpf = 2;
+  string phone = 3;
+}
+
+message GetPatientRequest  { string id = 1; }
+message GetPatientResponse { Patient result = 1; }
+
+message ListPatientsRequest {
+  PageRequest page = 1;
+}
+message ListPatientsResponse {
+  repeated Patient results = 1;
+  PageMeta meta = 2;
+}
+
+message UpdatePatientRequest {
+  string id = 1;
+  optional string full_name = 2;
+  optional string phone = 3;
+}
+
+message DeletePatientRequest  { string id = 1; }
+message DeletePatientResponse { bool success = 1; }

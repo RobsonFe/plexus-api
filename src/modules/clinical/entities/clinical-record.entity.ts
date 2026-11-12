@@ -7,7 +7,7 @@ import {
   OneToMany,
   JoinColumn,
 } from 'typeorm';
-import { PatientEntity } from './patient.entity';
+import { PatientEntity } from '../../patient/entities/patient.entity';
 import { MedicalFileEntity } from './medical-file.entity';
 
 /**

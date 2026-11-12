@@ -10,7 +10,11 @@ export function IsCpf(): PropertyDecorator {
     name: 'isCpf',
     validator: {
       validate: (value: unknown): boolean => {
-        if (typeof value !== 'string' || !/^\d{11}$/.test(value) || /^(\d)\1{10}$/.test(value)) {
+        if (
+          typeof value !== 'string' ||
+          !/^\d{11}$/.test(value) ||
+          /^(\d)\1{10}$/.test(value)
+        ) {
           return false;
         }
 
@@ -19,7 +23,10 @@ export function IsCpf(): PropertyDecorator {
         return [9, 10].every((length) => {
           const sum = digits
             .slice(0, length)
-            .reduce((total, digit, index) => total + digit * (length + 1 - index), 0);
+            .reduce(
+              (total, digit, index) => total + digit * (length + 1 - index),
+              0,
+            );
           return ((sum * 10) % 11) % 10 === digits[length];
         });
       },

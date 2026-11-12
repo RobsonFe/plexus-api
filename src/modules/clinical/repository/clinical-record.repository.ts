@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { ClinicalMetadataDto } from '../dto/clinical-metadata.dto';
 import { ClinicalRecordEntity } from '../entities/clinical-record.entity';
 import { MedicalFileEntity } from '../entities/medical-file.entity';
-import { PatientEntity } from '../entities/patient.entity';
+import { PatientEntity } from '../../patient/entities/patient.entity';
 
 /**
  * Única camada do módulo clínico que conhece o TypeORM.
@@ -13,7 +13,8 @@ export class ClinicalRecordRepository {
   constructor(private readonly dataSource: DataSource) {}
 
   /**
-   * Faz o upsert do paciente e cria o prontuário e o registro do arquivo numa única transação.
+   * Faz o upsert do paciente (reativando-o se tiver sido removido) e cria o prontuário
+   * e o registro do arquivo numa única transação.
    *
    * @param metadata Metadados validados do primeiro frame
    * @param recordId UUID gerado para o prontuário
@@ -37,8 +38,9 @@ export class ClinicalRecordRepository {
           fullName: metadata.patientFullName,
           documentCpf: metadata.patientCpf,
           phone: metadata.patientPhone,
+          deletedAt: null,
         })
-        .orUpdate(['full_name', 'phone'], ['document_cpf'])
+        .orUpdate(['full_name', 'phone', 'deleted_at'], ['document_cpf'])
         .returning('id')
         .execute();
 
