@@ -3,7 +3,7 @@ import { DataSource } from 'typeorm';
 import { ClinicalMetadataDto } from '../dto/clinical-metadata.dto';
 import { ClinicalRecordEntity } from '../entities/clinical-record.entity';
 import { MedicalFileEntity } from '../entities/medical-file.entity';
-import { PatientEntity } from '../entities/patient.entity';
+import { PatientEntity } from '../../patient/entities/patient.entity';
 
 /**
  * Única camada do módulo clínico que conhece o TypeORM.

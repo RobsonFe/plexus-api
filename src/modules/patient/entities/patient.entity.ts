@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   OneToMany,
 } from 'typeorm';
-import { ClinicalRecordEntity } from './clinical-record.entity';
+import { ClinicalRecordEntity } from '../../clinical/entities/clinical-record.entity';
 
 /**
  * Representa um paciente cadastrado na plataforma clínica Plexus.
