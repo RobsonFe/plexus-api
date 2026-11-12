@@ -1,105 +1,77 @@
-import { Controller } from "@nestjs/common";
-import { PatientRepository } from "../repository/patient.repository";
-import { GrpcMethod } from "@nestjs/microservices";
+import { status } from '@grpc/grpc-js';
+import {
+  Controller,
+  UseFilters,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
+import { GrpcMethod, Payload, RpcException } from '@nestjs/microservices';
+import { GrpcExceptionFilter } from '../../../common/filters/grpc-exception.filter';
+import { CreatePatientDto } from '../dto/create-patient.dto';
+import { PatientIdDto } from '../dto/patient-id.dto';
+import { UpdatePatientDto } from '../dto/update-patient.dto';
+import type {
+  DeletePatientResponse,
+  GetPatientResponse,
+  ListPatientsRequest,
+  ListPatientsResponse,
+} from '../interfaces/patient.interfaces';
+import { PatientService } from '../service/patient.service';
 
-@Controller('patient')
-export class PatientController{
-    constructor(private readonly patientRepository: PatientRepository) {}
+/**
+ * Controller gRPC que atende as chamadas do `PatientService`.
+ */
+@Controller()
+@UseFilters(GrpcExceptionFilter)
+@UsePipes(
+  // Sem forbidNonWhitelisted: o proto-loader adiciona props `_campo` aos campos `optional`.
+  new ValidationPipe({
+    whitelist: true,
+    transform: true,
+    exceptionFactory: (errors) =>
+      new RpcException({
+        code: status.INVALID_ARGUMENT,
+        message: errors
+          .flatMap((error) => Object.values(error.constraints ?? {}))
+          .join('; '),
+      }),
+  }),
+)
+export class PatientController {
+  constructor(private readonly patientService: PatientService) {}
 
-    @GrpcMethod('GetPatient')
-    public async getPatient(call: any, callback: any): Promise<void> {
-        try {
-            const patientId = call.request.patientId;
-            const patient = await this.patientRepository.findPatientById(patientId);
-            callback(null, { patient });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
+  @GrpcMethod('PatientService', 'CreatePatient')
+  public createPatient(
+    @Payload() data: CreatePatientDto,
+  ): Promise<GetPatientResponse> {
+    return this.patientService.createPatient(data);
+  }
 
-    @GrpcMethod('CreatePatient')
-    public async createPatient(call: any, callback: any): Promise<void> {
-        try {
-            const patientData = call.request;
-            const newPatient = await this.patientRepository.createPatient(patientData);
-            callback(null, { patient: newPatient });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
+  @GrpcMethod('PatientService', 'GetPatient')
+  public getPatient(
+    @Payload() data: PatientIdDto,
+  ): Promise<GetPatientResponse> {
+    return this.patientService.getPatient(data.id);
+  }
 
-    @GrpcMethod('UpdatePatient')
-    public async updatePatient(call: any, callback: any): Promise<void> {
-        try {
-            const patientData = call.request;
-            await this.patientRepository.updatePatient(patientData);
-            callback(null, { success: true });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
+  @GrpcMethod('PatientService', 'ListPatients')
+  public listPatients(
+    @Payload() data: ListPatientsRequest,
+  ): Promise<ListPatientsResponse> {
+    return this.patientService.listPatients(data);
+  }
 
-    @GrpcMethod('DeletePatient')
-    public async deletePatient(call: any, callback: any): Promise<void> {
-        try {
-            const patientId = call.request.patientId;
-            await this.patientRepository.deletePatientByCpf(patientId);
-            callback(null, { success: true });
-        } catch (error) {
-            callback(error, null);
-        }  
-    }
+  @GrpcMethod('PatientService', 'UpdatePatient')
+  public updatePatient(
+    @Payload() data: UpdatePatientDto,
+  ): Promise<GetPatientResponse> {
+    return this.patientService.updatePatient(data);
+  }
 
-    @GrpcMethod('GetAllPatients')
-    public async getAllPatients(call: any, callback: any): Promise<void> {
-        try {
-            const patients = await this.patientRepository.listPatients();
-            callback(null, { patients });
-        } catch (error) {
-            callback(error, null);
-        }
-    }   
-
-    @GrpcMethod('GetPatientByCpf')
-    public async getPatientByCpf(call: any, callback: any): Promise<void> {
-        try {
-            const cpf = call.request.cpf;
-            const patient = await this.patientRepository.findPatientByCpf(cpf);
-            callback(null, { patient });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
-    @GrpcMethod('GetPatientById')
-    public async getPatientById(call: any, callback: any): Promise<void> {
-        try {
-            const id = call.request.id;
-            const patient = await this.patientRepository.findPatientById(id);
-            callback(null, { patient });
-        } catch (error) {
-            callback(error, null);
-        }
-    }   
-
-    @GrpcMethod('GetPatientByPhone')
-    public async getPatientByPhone(call: any, callback: any): Promise<void> {
-        try {
-            const phone = call.request.phone;
-            const patient = await this.patientRepository.findPatientByPhone(phone);
-            callback(null, { patient });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
-
-    @GrpcMethod('ListPatients')
-    public async listPatients(call: any, callback: any): Promise<void> {
-        try {
-            const patients = await this.patientRepository.listPatients();
-            callback(null, { patients });
-        } catch (error) {
-            callback(error, null);
-        }
-    }
-
+  @GrpcMethod('PatientService', 'DeletePatient')
+  public deletePatient(
+    @Payload() data: PatientIdDto,
+  ): Promise<DeletePatientResponse> {
+    return this.patientService.deletePatient(data.id);
+  }
 }

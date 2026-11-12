@@ -2,8 +2,6 @@ syntax = "proto3";
 
 package plexus.patient.v1;
 
-import "common/v1/pagination.proto";
-
 service PatientService {
   rpc CreatePatient (CreatePatientRequest) returns (GetPatientResponse);
   rpc GetPatient    (GetPatientRequest)    returns (GetPatientResponse);
@@ -19,6 +17,17 @@ message Patient {
   string created_at = 4;
 }
 
+message PageRequest {
+  int32 page = 1;
+  int32 limit = 2;
+}
+
+message PageMeta {
+  int32 page = 1;
+  int32 limit = 2;
+  int64 total = 3;
+}
+
 message CreatePatientRequest {
   string full_name = 1;
   string cpf = 2;
@@ -29,11 +38,11 @@ message GetPatientRequest  { string id = 1; }
 message GetPatientResponse { Patient result = 1; }
 
 message ListPatientsRequest {
-  plexus.common.v1.PageRequest page = 1;
+  PageRequest page = 1;
 }
 message ListPatientsResponse {
   repeated Patient results = 1;
-  plexus.common.v1.PageMeta meta = 2;
+  PageMeta meta = 2;
 }
 
 message UpdatePatientRequest {

@@ -2,7 +2,7 @@ import { Transform } from 'class-transformer';
 import { IsIn, Length, Matches } from 'class-validator';
 import { EXTENSION_BY_MIME } from '../constants/clinical.constants';
 import { ClinicalMetadata } from '../interfaces/clinical.interfaces';
-import { IsCpf } from '../validation/is-cpf.decorator';
+import { IsCpf } from '../../../common/validation/is-cpf.decorator';
 
 /**
  * DTO validado dos metadados enviados no primeiro frame do stream de upload.

@@ -20,7 +20,9 @@ describe('AppController (e2e)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect(
+        'Olá, Plexus! Bem-vindo à API de estudo de gRCP Fullstack e novo projeto de estudo de NestJS com TypeScript, PostgreSQL, Redis, Docker, Swagger e JWT.',
+      );
   });
 
   afterEach(async () => {

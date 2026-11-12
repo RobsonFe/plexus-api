@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   OneToMany,
 } from 'typeorm';
 import { ClinicalRecordEntity } from '../../clinical/entities/clinical-record.entity';
@@ -26,6 +27,9 @@ export class PatientEntity {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   public createdAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', type: 'timestamptz', nullable: true })
+  public deletedAt: Date | null;
 
   @OneToMany(() => ClinicalRecordEntity, (record) => record.patient)
   public clinicalRecords: ClinicalRecordEntity[];

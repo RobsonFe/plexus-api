@@ -76,7 +76,12 @@ describe('ClinicalRecordRepository', () => {
       fullName: 'Paciente Teste',
       documentCpf: '11144477735',
       phone: '81999990000',
+      deletedAt: null,
     });
+    expect(queryBuilder.orUpdate).toHaveBeenCalledWith(
+      ['full_name', 'phone', 'deleted_at'],
+      ['document_cpf'],
+    );
     expect(manager.insert.mock.calls).toEqual([
       [
         ClinicalRecordEntity,

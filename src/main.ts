@@ -1,6 +1,5 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule, ObserveInstrument } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -36,17 +35,6 @@ async function bootstrap() {
         SwaggerModule.setup('doc', app, document, {
             customSiteTitle: 'Plexus',
         });
-
-     app.useGlobalPipes(
-        new ValidationPipe({
-            whitelist: true, 
-            transform: true, 
-            forbidNonWhitelisted: true, 
-            transformOptions: {
-                enableImplicitConversion: true,
-            },
-        }),
-    );
 
     app.connectMicroservice<MicroserviceOptions>(
         createGrpcOptions(app.get(ConfigService)),

@@ -1,20 +1,15 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { PatientController } from '../controller/patient.controller';
 import { PatientEntity } from '../entities/patient.entity';
 import { PatientRepository } from '../repository/patient.repository';
 import { PatientService } from '../service/patient.service';
-import { PatientController } from '../controller/patient.controller';
 
 /**
- * Agrupa a lógica do domínio clínico, os controllers gRPC e as entities do TypeORM.
+ * Agrupa o CRUD gRPC de pacientes: controller, regras de negócio e persistência.
  */
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([
-      PatientEntity,
-      PatientRepository,
-    ]),
-  ],
+  imports: [TypeOrmModule.forFeature([PatientEntity])],
   controllers: [PatientController],
   providers: [PatientRepository, PatientService],
 })

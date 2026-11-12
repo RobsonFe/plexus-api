@@ -1,10 +1,12 @@
 import { Transform } from 'class-transformer';
 import { Length, Matches } from 'class-validator';
-import { IsCpf } from '../../clinical/validation/is-cpf.decorator';
+import { IsCpf } from '../../../common/validation/is-cpf.decorator';
+import { CreatePatientRequest } from '../interfaces/patient.interfaces';
 
-
-
-export class CreatePatientDto {
+/**
+ * DTO validado do cadastro de paciente; CPF e telefone são normalizados para dígitos.
+ */
+export class CreatePatientDto implements CreatePatientRequest {
   @Length(3, 255, { message: 'fullName deve ter entre 3 e 255 caracteres' })
   public fullName: string;
 
